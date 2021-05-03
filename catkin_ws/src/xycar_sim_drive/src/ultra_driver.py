@@ -20,13 +20,15 @@ while not rospy.is_shutdown():
     if xycar_data.data:
         if xycar_data.data[1] < 300:
             if xycar_data.data[0]>xycar_data.data[2]:
-                angle = angle - 50
+                angle = angle - 45
             else:
-                angle = angle + 50
+                angle = angle + 45
         else:
-            if xycar_data.data[7]>xycar_data.data[6]:
-                angle = angle - 50
-            else :
-                angle = angle+50
+            if xycar_data.data[7]>xycar_data.data[6]+10:
+                angle = angle - 40
+            elif xycar_data.data[7]<xycar_data.data[6]-10:
+                angle = angle+40
+            else:
+                angle = 0
     xycar_msg.data = [angle, 50]
     motor_pub.publish(xycar_msg)
