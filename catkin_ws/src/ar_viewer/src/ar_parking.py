@@ -41,9 +41,10 @@ motor_pub = rospy.Publisher('xycar_motor_msg', Int32MultiArray, queue_size=1)
 
 xycar_msg = Int32MultiArray()
 
-angle = 50
+angle = 0
 speed = 10
-
+XTemp = 0
+YTemp = 0
 while not rospy.is_shutdown():
 
     (roll, pitch, yaw) = euler_from_quaternion(
@@ -88,14 +89,21 @@ while not rospy.is_shutdown():
                 speed = 0
         else:
             speed = 20
-            if ((int(arData["DX"]) != 0)):
-                if (int(arData["DX"]) > 0):
-                    angle = angle + 5
-                elif (int(arData["DX"])):
-                    angle = angle - 5
-            else:
-                angle = 0
-
+            thetaRad = math.atan(float(arData["DY"])/float(arData["DX"]))
+            slope = math.tan(math.pi - thetaRad - math.radians(yaw))
+            if (int(arData["DX"])>0):
+                X = distance/(pow(slope,2) + 1)
+                Y = X * slope
+            elif (int(arData["DX"])<0):
+                X = -distance/(pow(slope,2) + 1)
+                Y = X * slope
+            if (XTemp):
+                angle = math.atan(Y/X) - math.atan(YTemp/XTemp)
+            YTemp = Y
+            XTemp = X
+            angle = X
+                
+                
     xycar_msg.data = [angle, speed]
     motor_pub.publish(xycar_msg)
 
