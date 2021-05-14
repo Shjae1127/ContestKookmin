@@ -41,7 +41,7 @@ motor_pub = rospy.Publisher('xycar_motor_msg', Int32MultiArray, queue_size=1)
 
 xycar_msg = Int32MultiArray()
 
-angle = 0
+angle = 50
 speed = 10
 XTemp = 0
 YTemp = 0
@@ -91,19 +91,19 @@ while not rospy.is_shutdown():
             speed = 20
             thetaRad = math.atan(float(arData["DY"])/float(arData["DX"]))
             slope = math.tan(math.pi - thetaRad - math.radians(yaw))
-            if (int(arData["DX"])>0):
-                X = distance/(pow(slope,2) + 1)
+            if (int(arData["DX"]) > 0):
+                X = math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
                 Y = X * slope
-            elif (int(arData["DX"])<0):
-                X = -distance/(pow(slope,2) + 1)
-                Y = X * slope
-            if (XTemp):
-                angle = math.atan(Y/X) - math.atan(YTemp/XTemp)
-            YTemp = Y
-            XTemp = X
-            angle = X
-                
-                
+            elif (int(arData["DX"]) < 0):
+                X = -math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
+                Y = -X * slope
+            if(YTemp != 0):
+                # angle = math.degrees(math.atan(Y/X) - math.atan(YTemp/XTemp))
+                angle = X
+            if Y > YTemp:
+                YTemp = Y
+                XTemp = X
+
     xycar_msg.data = [angle, speed]
     motor_pub.publish(xycar_msg)
 
