@@ -24,12 +24,13 @@ while not rospy.is_shutdown():
         fr = distance.data[2]
         l = distance.data[7]
         r = distance.data[6]
+        
         theta = math.radians(36.7)
         ld_x = (fr-fl)*math.cos(theta)/2
         ld_y = (fr+fl)*math.sin(theta)/2
         ld = math.sqrt(pow(ld_x, 2)+pow(ld_y, 2))
         alpha = math.atan(ld_x/ld_y)
-        L = 450/3.33
+        L = 164*2/3.33
         angle = math.atan((2*L*math.sin(alpha))/ld)
         angle = math.degrees(angle)
         if fm < 250:
