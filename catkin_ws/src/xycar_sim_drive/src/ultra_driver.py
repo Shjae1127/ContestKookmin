@@ -32,5 +32,10 @@ while not rospy.is_shutdown():
         L = 450/3.33
         angle = math.atan((2*L*math.sin(alpha))/ld)
         angle = math.degrees(angle)
-    xycar_msg.data = [angle, 15]
+        if fm < 250:
+            if fr>fl:
+                angle = 50
+            elif fr<fl:
+                angle = -50
+    xycar_msg.data = [angle, 50]
     motor_pub.publish(xycar_msg)
