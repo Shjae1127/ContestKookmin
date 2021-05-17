@@ -109,9 +109,9 @@ if (distance.data):
     angle = math.atan((2*L*math.sin(alpha))/ld)
     angle = math.degrees(angle)
     if fm < 250:
-        if fr>fl:
+        if fr>fl+10:
             angle = 50
-        elif fr<fl:
+        elif fr<fl-10:
             angle = -50
 ```  
   + **문제점**: 기본적으로 안정적인 주행이 가능했지만 좌우회전 시에는 기존의 알고리즘이 아니라 강제로 조향을 해주어야 했음  
