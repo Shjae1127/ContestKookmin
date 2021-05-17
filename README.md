@@ -2,7 +2,7 @@
 ---
 ### 예선 과제 1
 + 첫 번째 시도(일단 무작정 해보기)  
-  + 일정거리 이상 벽이랑 가까워지면 회전이라 판단
+  + 일정거리 이상 벽이랑 가까워지면 곡선구간이라 판단
     1. 좌, 우측 대각선을 기준으로 어느쪽으로 회전해야할지 판단
     2. 회전해야할 방향으로 조향각에 일정값을 계속 더함(일정값의 기준은 내 마음)
   + 좌우 거리를 기준으로 통로의 중앙으로 가도록 조향
@@ -32,12 +32,60 @@ if xycar_data.data:
 ```
   + **문제점**: 통로의 중앙으로 이동하기 위해 조향할 때 조향값이 너무 급격하게 변해 안정적인 주행이 불가능함  
   + **예상 해결 방안**  
-    1. PID 제어를 통해 조향각의 안정화
+    1. PD 제어를 통해 조향각의 안정화
     2. 새로운 알고리즘
-+ 두 번째 시도(첫 번째 시도 + PID 제어)
+
+
++ 두 번째 시도(첫 번째 시도 + PD 제어)
+  + 일정거리 이상 벽이랑 가까워지면 곡선구간 또는 도착지점 근처라 판단
+    1. 좌, 우측 대각선 차이가 작으면 도착지점 근처라 판단 -> angle = 0 
+    2. .. 크면 곡선구간이라 판단 -> 회전해야할 방향으로 angle = 일정값
+  + 좌우 거리값을 기준으로 통로의 중앙으로 가도록 조향
+    1. 값이 일정값보다 크면 PD 제어  
+    2. 값에 비례(P) 하게 , 이전 값과의 차에 비례(D)하게 조향각 결정
+         (이전 값과의 차는 차속 방향을 나타냄 (양수면 차가 중앙차선기준으로 오른쪽방향으로 운동중임을 의미)) 
+    3. 일정 값으로 조향각의 saturation 을 설정
+
 ```
-//현진이가 수정
+    if xycar_data.data:
+        midl = float(xycar_data.data[7]-xycar_data.data[6]) # bias to left
+        diag_dif= float(xycar_data.data[0]-xycar_data.data[2]) # >0 -> to r
+        e = float(des - midl)
+        if midl != prev_midl:
+            dif = midl - prev_midl
+
+        if xycar_data.data[1] < 300: #-------------------------------------------------------- curve or goal point
+            if diag_dif >20: # curve to l
+                angle = -50
+            elif diag_dif <-20: # curve to r
+                angle = 50
+            else: # goal point
+                angle = 0
+
+            #if midl !=prev_midl:
+            #    print(kp*e, kd*dif  , angle,  "curve") 
+                
+        else: #------------------------------------------------------------------------------- Linear
+
+            if abs(e) >3: # ------------------PD control
+                angle =  int(kp * e - kd * dif ) # on
+            else:
+                angle = 0 # off
+
+            if angle >=50: # ----------------saturation
+                angle = 50
+            elif angle <=-50:
+                angle = -50 
+            
+            #if midl !=prev_midl:
+            #    print(kp*e, kd*dif , angle,  "linear")     
+                         
+        prev_midl = midl
 ```
+ + **문제점**: 통로의 중앙으로 이동하기 위해 조향할 때 조향값이 너무 급격하게 변해 안정적인 주행이 불가능함  
+  + **예상 해결 방안**  
+    1. PD 제어를 통해 조향각의 안정화
+    2. 새로운 알고리즘
 
 + 세 번째 시도(Pure Pursuit)  
 [Reference](https://dingyan89.medium.com/three-methods-of-vehicle-lateral-control-pure-pursuit-stanley-and-mpc-db8cc1d32081)  
