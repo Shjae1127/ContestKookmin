@@ -14,7 +14,6 @@ Height = 480
 isNotLpos = True
 isNotRpos = True
 noPos = True
-pathwidth = 450
 isStandardDriving = True
 # draw rectangle
 
@@ -22,7 +21,6 @@ isStandardDriving = True
 
 
 def draw_rectangle(img, lpos, rpos, offset=0):
-    center = (lpos + rpos) / 2
 
     cv2.rectangle(img, (lpos - 5, 15 + offset),
                   (lpos + 5, 25 + offset),
@@ -38,51 +36,10 @@ def draw_rectangle(img, lpos, rpos, offset=0):
 
 def process_image(frame):
     global Offset
-    global pathwidth
     global isStandardDriving
-    frame, lpos, rpos, pathwidth = detectLine(frame, pathwidth, isStandardDriving)
-    # frame = cv2.Canny(frame, 400, 200, None, 3)
-
-    # x = 0
-    # w = 600
-    # h = 50
-    # roi = frame[Offset:Offset+h, x:x+w]
-    # if noPos:
-    #     lpos, rpos = 100, 500
-    #     noPos = False
-    # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
-    # threshold = 50
-    # minLineLength = 5
-    # maxLineGap = 100
-    # linesP = cv2.HoughLinesP(
-    #     roi, 1, np.pi / 180, threshold, None, minLineLength, maxLineGap)
-    # if linesP is not None:
-    #     for i in range(0, len(linesP)):
-    #         l = linesP[i][0]
-    #         cv2.line(frame, (x+l[0], Offset+l[1]), (x+l[2],
-    #                                                 Offset+l[3]), (0, 0, 255), 3, cv2.LINE_AA)
-    #         if (l[0] != l[2]):
-    #             slope = (float)(l[1]-l[3])/(float)(l[0]-l[2])
-    #             point = x + l[0]+(h/2-l[1])/slope
-
-    #             if point < 300:
-    #                 lpos = int(round(point))
-    #                 isNotLpos = False
-    #             elif point > 400:
-    #                 rpos = int(round(point))
-    #                 isNotRpos = False
-    #     if isNotLpos:
-    #         lpos = rpos - pathwidth
-    #         isNotLpos = False
-    #     if isNotRpos:
-    #         rpos = lpos + pathwidth
-    #         isNotRpos = False
-    #     if (not isNotLpos) & (not isNotRpos):
-    #         pathwidth = rpos - lpos
+    frame, lpos, rpos = detectLine(frame, isStandardDriving)
     frame = draw_rectangle(frame, lpos, rpos, offset=Offset)
-    #     isNotLpos = True
-    #     isNotRpos = True
-
+    
     return (lpos, rpos), frame
 
 
