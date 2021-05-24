@@ -8,14 +8,10 @@ import random
 import math
 import time
 from detect_line import Offset, detectLine
+from driving_method import purePursuit
 
 Width = 640
 Height = 480
-isNotLpos = True
-isNotRpos = True
-noPos = True
-isStandardDriving = True
-# draw rectangle
 
 # draw rectangle
 
@@ -28,6 +24,10 @@ def draw_rectangle(img, lpos, rpos, offset=0):
     cv2.rectangle(img, (rpos - 5, 15 + offset),
                   (rpos + 5, 25 + offset),
                   (0, 255, 0), 2)
+    cv2.rectangle(img, ((rpos+lpos)/2 - 5, 15 + offset),
+                  ((rpos+lpos)/2 + 5, 25 + offset),
+                  (0, 255, 0), 2)
+    cv2.rectangle(img,(320-5,offset+15),(320+5,offset+25),(0,0,255),2)
     return img
 
 # You are to find "left and light position" of road lanes
@@ -36,8 +36,11 @@ def draw_rectangle(img, lpos, rpos, offset=0):
 
 def process_image(frame):
     global Offset
-    global isStandardDriving
-    frame, lpos, rpos = detectLine(frame, isStandardDriving)
+    frame, lpos, rpos = detectLine(frame)
+    if lpos < 0:
+        lpos = 0
+    if rpos >640:
+        rpos = 640
     frame = draw_rectangle(frame, lpos, rpos, offset=Offset)
     
     return (lpos, rpos), frame
@@ -82,9 +85,8 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         ret, image = cap.read()
         pos, frame = process_image(image)
-
-        steer_angle = 0
+        steer_angle = purePursuit(pos)
+        
         draw_steer(frame, steer_angle)
-
         if cv2.waitKey(3) & 0xFF == ord('q'):
             break
