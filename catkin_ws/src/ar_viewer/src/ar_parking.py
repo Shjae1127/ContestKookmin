@@ -91,22 +91,13 @@ while not rospy.is_shutdown():
         Y = X * slope
         if(goForward):
             if distance < 100:
-                speed = 5
                 if distance < 70:
                     speed = 0
                     if ((distance < 60) | (int(arData["DX"]) > 8) | (int(arData["DX"]) < -8) | (yaw > 5) | (yaw < -5)):
                         goBack = True
                         goForward = False
             else:
-                speed = 20
-                # thetaRad = math.atan(float(arData["DY"])/float(arData["DX"]))
-                # slope = math.tan(math.pi - thetaRad - math.radians(yaw))
-                # if (int(arData["DX"]) > 0):
-                # X = math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
-                # Y = X * slope
-                # elif (int(arData["DX"]) < 0):
-                #     X = -math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
-                #     Y = -X * slope
+                speed = 50
                 if (int(arData["DX"]) < 0):
                     X = -X
                 if(YTemp != 0):
@@ -119,10 +110,7 @@ while not rospy.is_shutdown():
                 goBack = False
                 goForward = True
             else:
-                speed = -20
-                # if (int(arData["DX"]) > 0):
-                #     X = math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
-                #     Y = X * slope
+                speed = -50
                 if (int(arData["DX"]) < 0):
                     X = -X
                 if(YTemp != 0):
