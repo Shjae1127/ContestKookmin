@@ -7,6 +7,22 @@ slopeTemp_L = -10
 lpos, rpos = 125, 560
 pathwidth = rpos - lpos
 
+def calIntersection(p1, p2, p3, p4):
+    if (p1[0]-p2[0]!=0)&(p3[0]-p4[0]!=0):
+        m1 = float(p1[1]-p2[1])/float(p1[0]-p2[0])
+        m2 = float(p3[1]-p4[1])/float(p3[0]-p4[0])
+        x = float(p3[1]-p1[1]-m2*p3[0]+m1*p1[0])/float(m1-m2)
+        y = m1*(x-p1[0])+p1[1]
+    elif(p1[0]-p2[0]==0)&(p3[0]-p4[0]!=0):
+        x = 0
+        m2 = float(p3[1]-p4[1])/float(p3[0]-p4[0])
+        y = m2*(-p3[0])+p4[0]
+    elif(p1[0]-p2[0]!=0)&(p3[0]-p4[0]==0):
+        x = 0
+        m1 = float(p1[1]-p2[1])/float(p1[0]-p2[0])
+        y = m1*(-p1[0])+p2[0]
+    return (round(x),round(y))
+
 def detectLine(frame):
     global slopeTemp_L, slopeTemp_R
     global lpos, rpos, pathwidth
