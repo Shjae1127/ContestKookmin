@@ -8,7 +8,7 @@ import random
 import math
 import time
 from detect_line import Offset, detectLine
-from driving_method import purePursuit
+from driving_method import getSteerAng
 
 Width = 640
 Height = 480
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         ret, image = cap.read()
         pos, frame = process_image(image)
-        steer_angle = purePursuit(pos)
+        steer_angle = getSteerAng(pos)
         
         draw_steer(frame, steer_angle)
         if cv2.waitKey(3) & 0xFF == ord('q'):
