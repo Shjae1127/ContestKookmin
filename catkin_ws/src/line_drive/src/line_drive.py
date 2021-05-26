@@ -8,10 +8,9 @@ import random
 import math
 import time
 from detect_line import Offset, detectLine
-from driving_method import getSteerAng
+from driving_method import Width, Height, getSteerAng
 
-Width = 640
-Height = 480
+
 
 # draw rectangle
 
