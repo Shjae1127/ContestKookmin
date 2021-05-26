@@ -118,4 +118,72 @@ if (distance.data):
   + **예상 해결 방안**: 새로운 알고리즘의 도입  
 
 ### 예선 과제 2  
-<<보류>>
++ Hough Line Transform [Reference](https://docs.opencv.org/3.4.0/d9/db0/tutorial_hough_lines.html)  
+  + 다음 사진과 같이 Canny Detector를 이용하여 영상의 edge를 검출한 뒤 Probablistic Hough Line Transform 을 이용하여 좌우 차선의 위치를 구한다. (OpenCV 내장 함수 이용)  
+  + 만약 차선을 검출하지 못한다면 이전에 검출했던 차선의 위치를 이용하여 도로의 폭을 계산하여 이를 이용하여 가상의 차선을 만든다.  
+  + 영상의 중앙(붉은 사각형)과 좌우 차선의 중앙(가운데 초록 사각형)의 위치를 비교하여 조향각을 찾는다. 이 때, 참고자료(p.24-p.25)를 참고하여 계수를 설정한다.  
+![Canny](https://user-images.githubusercontent.com/49667821/119705841-33e4c500-be94-11eb-9c24-78c75c0abfe1.png)
+
+### 예선 과제 3
++ 첫 번째 시도(DX)
+  +  AR Tag를 통해 얻은 변수 중 하나인 DX를 이용하여 조향
+```
+if distance:
+    if distance < 100:
+        speed = 5
+        if distance < 70:
+            speed = 0
+    else:
+        speed = 20
+        if ((int(arData["DX"]) != 0)):
+            if (int(arData["DX"]) > 0):
+                angle = angle + 5
+            elif (int(arData["DX"])):
+                angle = angle - 5
+        else:
+            angle = 0
+```
+  + **문제점**: 위치는 어느정도 만족을 하지만 주차각? 이 너무 큰 오차를 가짐, 이유는 모르겠으나 시작 위치 3에서 AR Tag에 일정 거리 이상 가까워졌을 때 잠시 동안 정보를 리셋시키지 못함
+  + **예상 해결 방안**: 새로운 조향 알고리즘 구현, AR Tag에 필요 이상 가까이 갔을 경우 후진하는 알고리즘 추가
+
++ 두 번째 시도(X)
+  + DX, DY를 이용하여 AR Tag를 원점으로 하는 XY 좌표계를 구현하여 그 X값을 이용하여 조향  
+  + 다음의 조건을 만족하면 일정거리 후진한다. 이 때의 조향각은 전진할 떄의 조향각에 -를 곱한 값이다.
+    +  AR Tag에 필요 이상으로 가까이 갔을 경우
+    +  주차되어야할 위치이지만 Yaw의 절댓값이 너무 크거나, DX의 값이 너무 큰 경우  
+```
+if distance:
+    thetaRad = math.atan(float(arData["DY"])/float(arData["DX"]))
+    slope = math.tan(math.pi - thetaRad - math.radians(yaw))
+    X = math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
+    Y = X * slope
+    if(goForward):
+        if distance < 100:
+            if distance < 70:
+                speed = 0
+                if ((distance < 60) | (int(arData["DX"]) > 8) | (int(arData["DX"]) < -8) | (yaw > 5) | (yaw < -5)):
+                    goBack = True
+                    goForward = False
+        else:
+            speed = 50
+            if (int(arData["DX"]) < 0):
+                X = -X
+            if(YTemp != 0):
+                angle = X
+            if Y > YTemp:
+                YTemp = Y
+                XTemp = X
+    if(goBack):
+        if distance > 300:
+            goBack = False
+            goForward = True
+        else:
+            speed = -50
+            if (int(arData["DX"]) < 0):
+                X = -X
+            if(YTemp != 0):
+                angle = -X
+            if Y > YTemp:
+                YTemp = Y
+                XTemp = X
+```
