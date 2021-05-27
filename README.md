@@ -9,25 +9,24 @@
     1. 움직여야할 방향으로 조향각에 일정값을 계속 더함(일정값의 기준은 내 마음)
 
 ```
-if xycar_data.data:
-    if xycar_data.data[1] < 300:
-        if xycar_data.data[0]>xycar_data.data[2]:
-            angle = angle - 50
-            angle = angle - 45
+    if xycar_data.data:
+        angle = 0
+        if xycar_data.data[1] < 300:
+            if xycar_data.data[0]>xycar_data.data[2]:
+                angle =- 50
+            else:
+                angle =50
         else:
-            angle = angle + 50
-            angle = angle + 45
-    else:
-        if xycar_data.data[7]>xycar_data.data[6]:
-            angle = angle - 50
-        else :
-            angle = angle+50
-        if xycar_data.data[7]>xycar_data.data[6]+10:
-            angle = angle - 40
-        elif xycar_data.data[7]<xycar_data.data[6]-10:
-            angle = angle+40
-        else:
-            angle = 0
+            if xycar_data.data[7]>xycar_data.data[6]+10:
+                angle =-40
+            elif xycar_data.data[7]<xycar_data.data[6]-10:
+                angle =40
+            else:
+                angle = 0
+        
+        
+        xycar_msg.data = [angle, 50]
+        motor_pub.publish(xycar_msg)
 
 ```
   + **문제점**: 통로의 중앙으로 이동하기 위해 조향할 때 조향값이 너무 급격하게 변해 안정적인 주행이 불가능함  
@@ -40,7 +39,7 @@ if xycar_data.data:
   + 일정거리 이상 벽이랑 가까워지면 곡선구간 또는 도착지점 근처라 판단 및 제어
     1. 좌, 우측 대각선 차이가 작으면 도착지점 근처라 판단 -> angle = 0 
     2. .. 크면 곡선구간이라 판단 -> 회전해야할 방향으로 angle = 일정값
-  + 직선구간 : 좌우 거리값을 기준으로 통로의 중앙으로 가도록 조향
+  + 직선구간 : 좌우 대각선 거리값을 기준으로 통로의 중앙으로 가도록 조향
     1. 일정값 기준으로 PD 제어 on/off  
     2. on -> 값에 비례(P) 하게 , 이전 값과의 차에 비례(D)하게 조향각 결정
 
@@ -49,12 +48,15 @@ if xycar_data.data:
     3. 조향각의 saturation 을 설정
 
 ```
+angle ,e, dt, dif, prev = 0,0,0,0,0
+kp = 1
+kd = 12#13.5
+ki = 1
+while not rospy.is_shutdown():
     if xycar_data.data:
-        midl = float(xycar_data.data[7]-xycar_data.data[6]) # bias to left
         diag_dif= float(xycar_data.data[0]-xycar_data.data[2]) # >0 -> to r
-        e = float(des - midl)
-        if midl != prev_midl:
-            dif = midl - prev_midl
+        if diag_dif != prev: #diag_dif
+            dif = diag_dif - prev #midl
 
         if xycar_data.data[1] < 300: #-------------------------------------------------------- curve or goal point
             if diag_dif >20: # curve to l
@@ -69,20 +71,20 @@ if xycar_data.data:
                 
         else: #------------------------------------------------------------------------------- Linear
 
-            if abs(e) >5: # ------------------PD control
-                angle =  int(kp * e - kd * dif ) # on
+            if abs(diag_dif) >5: # ------------------PD control
+                angle =  int(-kp * diag_dif - kd * dif ) # on
             else:
                 angle = 0 # off
 
             if angle >=50: # ----------------saturation
                 angle = 50
             elif angle <=-50:
-                angle = -50 
+                angle = -50
             
-            #if midl !=prev_midl:
+            #if midl !=prev_midl: # loop is much faster than this -okay
             #    print(kp*e, kd*dif , angle,  "linear")     
-                         
-        prev_midl = midl
+                     
+        prev = diag_dif #midl
 ```
  + **문제점**: 직선구간 중앙차선에 가까울 때 제어 X -> 중앙차선 기준으로 경로가 진동
   + **예상 해결 방안**  새로운 알고리즘 
