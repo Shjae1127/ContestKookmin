@@ -42,8 +42,7 @@ motor_pub = rospy.Publisher('xycar_motor_msg', Int32MultiArray, queue_size=1)
 xycar_msg = Int32MultiArray()
 
 angle = 50
-speed = 10
-X = 0
+speed = 50
 goBack = False
 goForward = True
 while not rospy.is_shutdown():
@@ -84,37 +83,42 @@ while not rospy.is_shutdown():
     cv2.imshow('AR Tag Position', img)
     cv2.waitKey(1)
     if distance:
-        thetaRad = abs(math.atan(float(arData["DY"])/float(arData["DX"])))
-        slope = abs(math.tan(math.pi - thetaRad - math.radians(yaw)))
-        X = math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
-        Y = X * slope
+        DX = float((arData["DX"]))
+        DY = float((arData["DY"]))
+        yaw_rad = math.radians(yaw)
+        thetaRad = abs(math.atan(DY/DX))
         l = 835/6
-        ld = math.sqrt(pow(X,2)+pow(Y/2,2))
-        beta = abs(math.atan(Y/(2*X)))
+        
         if yaw > 0:
-            y1 = -math.tan(math.pi/2-math.radians(yaw)) * X + Y
-            if y1 > Y:
-                alpha = math.pi/2-(beta-yaw)
-            else:
-                if float(arData["DX"])>0:
-                    alpha = beta - (math.pi/2-math.radians(yaw))
-                    alpha = -alpha
-                elif float(arData["DX"])<=0:
-                    alpha = (math.pi/2-math.radians(yaw)) - beta
+            if DX>0:
+                slope = yaw_rad + thetaRad
+                slope = math.pi - slope
+                X = distance * math.cos(slope)
+                Y = distance * math.sin(slope)
+                alpha = math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
+            elif DX<= 0:
+                slope = math.pi - thetaRad + yaw_rad
+                slope = math.pi - slope
+                X = distance * math.cos(slope)
+                Y = distance * math.sin(slope)
+                alpha = -math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
+        elif yaw <= 0:
+            if DX>0:
+                slope = thetaRad + yaw_rad
+                slope = math.pi - slope
+                X = distance * math.cos(slope)
+                Y = distance * math.sin(slope)
+                alpha = math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
+            elif DX<=0:
+                slope = math.pi - thetaRad + yaw_rad
+                slope = math.pi - slope
+                X = distance * math.cos(slope)
+                Y = distance * math.sin(slope)
+                alpha = -math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
                 
-        elif yaw<=0:
-            y1 = -math.tan(math.pi/2+math.radians(yaw)) * X + Y
-            if y1>Y:
-                alpha = math.pi/2 - (math.radians(yaw)+beta)
-            else:
-                if float(arData["DX"])>0:
-                    alpha = (math.pi/2+math.radians(yaw))-beta
-                    alpha = -alpha
-                elif float(arData["DX"])<0:
-                    alpha = beta - (math.pi/2 + math.radians(yaw))
-                
-            
-        angle = math.degrees(math.atan(2*l*math.sin(alpha)/ld))
+        
+        ld = math.sqrt(pow(X,2)+pow(Y/2,2))
+        angle = round(math.degrees(math.atan(2*l*math.sin(alpha)/ld)))
         
         if(goForward):
             if distance < 100:
@@ -132,7 +136,7 @@ while not rospy.is_shutdown():
                 goForward = True
             else:
                 speed = -50
-    print(X)
+                angle = -angle
     xycar_msg.data = [angle, speed]
     motor_pub.publish(xycar_msg)
 
