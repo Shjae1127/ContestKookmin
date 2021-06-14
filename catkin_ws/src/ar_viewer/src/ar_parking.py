@@ -83,60 +83,31 @@ while not rospy.is_shutdown():
     cv2.imshow('AR Tag Position', img)
     cv2.waitKey(1)
     if distance:
-        DX = float((arData["DX"]))
-        DY = float((arData["DY"]))
-        yaw_rad = math.radians(yaw)
-        thetaRad = abs(math.atan(DY/DX))
-        l = 835/6
-        
-        if yaw > 0:
-            if DX>0:
-                slope = yaw_rad + thetaRad
-                slope = math.pi - slope
-                X = distance * math.cos(slope)
-                Y = distance * math.sin(slope)
-                alpha = math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
-            elif DX<= 0:
-                slope = math.pi - thetaRad + yaw_rad
-                slope = math.pi - slope
-                X = distance * math.cos(slope)
-                Y = distance * math.sin(slope)
-                alpha = -math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
-        elif yaw <= 0:
-            if DX>0:
-                slope = thetaRad + yaw_rad
-                slope = math.pi - slope
-                X = distance * math.cos(slope)
-                Y = distance * math.sin(slope)
-                alpha = math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
-            elif DX<=0:
-                slope = math.pi - thetaRad + yaw_rad
-                slope = math.pi - slope
-                X = distance * math.cos(slope)
-                Y = distance * math.sin(slope)
-                alpha = -math.atan(abs((Y/(2*X)-math.tan(math.pi/2+yaw_rad))/(1+math.tan(math.pi/2+yaw_rad)*Y/(2*X))))
-                
-        
-        ld = math.sqrt(pow(X,2)+pow(Y/2,2))
-        angle = round(math.degrees(math.atan(2*l*math.sin(alpha)/ld)))
-        
+        thetaRad = math.atan(float(arData["DY"])/float(arData["DX"]))
+        slope = math.tan(math.pi - thetaRad - math.radians(yaw))
+        X = math.sqrt(pow(distance, 2)/(pow(slope, 2) + 1))
+        Y = X * slope
         if(goForward):
-            if distance < 100:
-                if distance < 70:
-                    speed = 0
-                    if ((distance < 60) | (int(arData["DX"]) > 8) | (int(arData["DX"]) < -8) | (yaw > 5) | (yaw < -5)):
-                        goBack = True
-                        goForward = False
+            if distance < 70:
+                speed = 0
+                if ((distance < 60) | (int(arData["DX"]) > 8) | (int(arData["DX"]) < -8) | (yaw > 5) | (yaw < -5)):
+                    goBack = True
+                    goForward = False
             else:
                 speed = 50
-
+                if (int(arData["DX"]) < 0):
+                    X = -X
+                angle = X
         if(goBack):
-            if distance > 300:
+            if distance > 200:
                 goBack = False
                 goForward = True
             else:
                 speed = -50
-                angle = -angle
+                if (int(arData["DX"]) < 0):
+                    X = -X
+                angle = -2*X
+
     xycar_msg.data = [angle, speed]
     motor_pub.publish(xycar_msg)
 
