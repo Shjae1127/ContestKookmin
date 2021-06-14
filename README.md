@@ -8,9 +8,9 @@
     <li>
       <a href="#예선-과제">예선 과제</a>
       <ul>
-        <li><a href="#예선-과제-1">예선 과제 1</a></li>
-        <li><a href="#예선-과제-2">예선 과제 2</a></li>
-        <li><a href="#예선-과제-3">예선 과제 3</a></li>
+        <li><a href="#예선-과제-1-report">예선 과제 1</a></li>
+        <li><a href="#예선-과제-2-report">예선 과제 2</a></li>
+        <li><a href="#예선-과제-3-report">예선 과제 3</a></li>
       </ul>
     </li>
     <li>
@@ -141,7 +141,7 @@ if (distance.data):
   + **문제점**: 기본적으로 안정적인 주행이 가능했지만 좌우회전 시에는 기존의 알고리즘이 아니라 강제로 조향을 해주어야 했음  
   + **예상 해결 방안**: 새로운 알고리즘의 도입  
 
-## 예선 과제 2  [(Report)](https://github.com/Shjae1127/ROS/files/6649971/line_find.pdf)
+## 예선 과제 2 [(Report)](https://github.com/Shjae1127/ROS/files/6649971/line_find.pdf)
 + Hough Line Transform [Reference](https://docs.opencv.org/3.4.0/d9/db0/tutorial_hough_lines.html)  
   + 다음 사진과 같이 Canny Detector를 이용하여 영상의 edge를 검출한 뒤 Probablistic Hough Line Transform 을 이용하여 좌우 차선의 위치를 구한다. (OpenCV 내장 함수 이용)  
   + 만약 차선을 검출하지 못한다면 이전에 검출했던 차선의 위치를 이용하여 도로의 폭을 계산하여 이를 이용하여 가상의 차선을 만든다.  
