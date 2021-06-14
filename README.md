@@ -1,6 +1,30 @@
+<br>
+<!-- TABLE OF CONTENTS -->
+<p align="center">
+  <details open="open">
+    <p align="center">
+    <summary>Table of Contents</summary>
+    <ol>
+      <li>
+        <a href="#예선-과제">예선 과제</a>
+        <ul>
+          <li><a href="#예선-과제-1">예선 과제 1</a></li>
+          <li><a href="#예선-과제-2">예선 과제 2</a></li>
+          <li><a href="#예선-과제-3">예선 과제 3</a></li>
+        </ul>
+      </li>
+      <li>
+        <a href="#본선">본선</a>
+        <ul>
+        </ul>
+      </li>
+    </ol>
+  </details>
+</p>
+
+
 # 예선 과제
----
-### 예선 과제 1
+## 예선 과제 1
 + 첫 번째 시도(일단 무작정 해보기)  
   + 일정거리 이상 벽이랑 가까워지면 곡선구간이라 판단
     1. 좌, 우측 대각선을 기준으로 어느쪽으로 회전해야할지 판단
@@ -119,14 +143,14 @@ if (distance.data):
   + **문제점**: 기본적으로 안정적인 주행이 가능했지만 좌우회전 시에는 기존의 알고리즘이 아니라 강제로 조향을 해주어야 했음  
   + **예상 해결 방안**: 새로운 알고리즘의 도입  
 
-### 예선 과제 2  
+## 예선 과제 2  
 + Hough Line Transform [Reference](https://docs.opencv.org/3.4.0/d9/db0/tutorial_hough_lines.html)  
   + 다음 사진과 같이 Canny Detector를 이용하여 영상의 edge를 검출한 뒤 Probablistic Hough Line Transform 을 이용하여 좌우 차선의 위치를 구한다. (OpenCV 내장 함수 이용)  
   + 만약 차선을 검출하지 못한다면 이전에 검출했던 차선의 위치를 이용하여 도로의 폭을 계산하여 이를 이용하여 가상의 차선을 만든다.  
   + 영상의 중앙(붉은 사각형)과 좌우 차선의 중앙(가운데 초록 사각형)의 위치를 비교하여 조향각을 찾는다. 이 때, 참고자료(p.24-p.25)를 참고하여 계수를 설정한다.  
 ![Canny](https://user-images.githubusercontent.com/49667821/119705841-33e4c500-be94-11eb-9c24-78c75c0abfe1.png)
 
-### 예선 과제 3
+## 예선 과제 3
 + 첫 번째 시도(DX)
   +  AR Tag를 통해 얻은 변수 중 하나인 DX를 이용하여 조향
 ```
