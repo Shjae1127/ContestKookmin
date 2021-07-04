@@ -13,7 +13,7 @@
       <a href="./README_Qualifying.md">예선 과제</a>
     </li>
     <li>
-      <a href="#본선">본선</a>
+      <a href="./README_MainStage.md">본선</a>
       <ul>
       </ul>
     </li>
