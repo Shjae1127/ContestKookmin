@@ -1,6 +1,8 @@
 <launch>
 
   <include file="$(find xycar_motor)/launch/xycar_motor.launch" />
+  <include file="$(find xycar_lidar)/launch/lidar_noviewer.launch" />
+  <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic_noviewer.launch" />
 
   <node name="usb_cam" output="screen" pkg="usb_cam" type="usb_cam_node">
     <param name="video_device" value="/dev/videoCAM" />
@@ -13,6 +15,6 @@
     <param name="io_method" value="mmap" />
   </node>
 
-  <node name="auto_drive" output="screen" pkg="auto_drive" type="hough_drive.py" />
+  <node name="main_drive" output="screen" pkg="mainstage" type="main_drive.py" />
 
 </launch>
