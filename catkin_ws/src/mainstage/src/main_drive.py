@@ -16,10 +16,12 @@ from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
 from detect_line import Offset, detectLine
 from driving_method import Width, Height, getSteerAng
+from parking import parking as p
 
 import sys
 import os
 import signal
+
 
 def signal_handler(sig, frame):
     os.system('killall -9 python rosout')
@@ -114,6 +116,7 @@ def processImage(frame):
     cv2.imshow('image', frame)
     return (lpos, rpos)
 
+
 def startDrive():
     global pub
     global image
@@ -131,10 +134,11 @@ def startDrive():
             continue
 
         lpos, rpos = processImage(image)
-
+        
         center = (lpos + rpos) / 2
         angle = (Width/2 - center)
-        setAnglenSpeed(angle, 20)
+        ultra_array = p()
+        setAnglenSpeed(angle, 0)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
