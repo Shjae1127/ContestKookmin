@@ -17,42 +17,43 @@ from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
 from detect_line import Offset, detectLine
 from driving_method import Width, Height, getSteerAng
+from obstacle_detect import lidar
 
 import sys
 import os
 import signal
 
 # Variable Initailization
-lpos, rpos = 125, 560
+lpos, rpos = 125, 450
 pathwidth = rpos - lpos
 Width = 640
 Height = 480
 Gap = 40
 cpos = 266
 
-# def signal_handler(sig, frame):
-#     os.system('killall -9 python rosout')
-#     sys.exit(0)
+def signal_handler(sig, frame):
+    os.system('killall -9 python rosout')
+    sys.exit(0)
 
-# signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
 
-# image = np.empty(shape=[0])
-# bridge = CvBridge()
-# pub = None
+image = np.empty(shape=[0])
+bridge = CvBridge()
+pub = None
 
-# def img_callback(data):
-#     global image    
-#     image = bridge.imgmsg_to_cv2(data, "bgr8")
+def img_callback(data):
+    global image    
+    image = bridge.imgmsg_to_cv2(data, "bgr8")
 
-# # publish xycar_motor msg
-# def setAnglenSpeed(Angle, Speed): 
-#     global pub
+# publish xycar_motor msg
+def setAnglenSpeed(Angle, Speed): 
+    global pub
 
-#     msg = xycar_motor()
-#     msg.angle = Angle
-#     msg.speed = Speed
+    msg = xycar_motor()
+    msg.angle = Angle
+    msg.speed = Speed
 
-#     pub.publish(msg)
+    pub.publish(msg)
 
 # 중앙 차선 좌표도 그릴 수 있도록 수정
 # draw rectangle
@@ -228,69 +229,84 @@ def detectLine(frame):
 # show image and return lpos, rpos
 def processImage(frame):
     global Offset
+    global out
     frame, lpos, rpos, cpos = detectLine(frame) # 센터 좌표 추가
     if lpos < 0:
         lpos = 0
     if rpos >640:
         rpos = 640
     frame = drawRectangle(frame, lpos, rpos, cpos, offset=Offset) # 센터 좌표 추가
+
     cv2.imshow('image', frame)
+
     return (lpos, rpos)
 
 # 일단 임시로 주석처리(당장은 ROS사용 X)
 
-# def startDrive():
-#     global pub
-#     global image
-#     global cap
-#     global Width, Height
+def startDrive():
+    global pub
+    global image
+    global cap
+    global Width, Height
 
-#     rospy.init_node('main_control')
-#     pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
+    rospy.init_node('main_control')
+    pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
 
-#     image_sub = rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
-#     rospy.sleep(2)
+    image_sub = rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
+    rospy.sleep(2)
 
-#     while True:
-#         while not image.size == (640*480*3):
-#             continue
+    fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+    out = cv2.VideoWriter('/home/nvidia/test/test.avi', fourcc, 30.0, (640, 480))
 
-#         lpos, rpos = processImage(image)
 
-#         center = (lpos + rpos) / 2
-#         angle = (Width/2 - center)
-#         setAnglenSpeed(angle, 20)
+    while True:
+        while not image.size == (640*480*3):
+            continue
 
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
-
-#     rospy.spin()
-
-# if __name__ == '__main__':
-
-#     startDrive()
-
-def start():
-  
-    cap = cv2.VideoCapture('kmu_track.mkv')
-    time.sleep(3)
-
-    while not rospy.is_shutdown():
-        ret, image = cap.read()
         lpos, rpos = processImage(image)
-        center = (lpos + rpos) / 2
-        # c = center - lpos
-        # c2 = rpos - center
-        # print('c: ', c, 'c2: ', c2)
-        # steer_angle = getSteerAng(pos)
         
-        # draw_steer(frame, steer_angle)
-        if cv2.waitKey(5) & 0xFF == ord('q'):
+        out.write(image)
+
+        center = (lpos + rpos) / 2
+        # angle = (Width/2 - center)
+        
+        angle = getSteerAng((lpos,rpos))
+        setAnglenSpeed(angle, 0)
+        lidar_range, lidar_angleinc = lidar.getLidarData()
+        for i in lidar_range:
+            if i < 0.5:
+                print(i)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+    out.release()
+    rospy.spin()
+    
 
 if __name__ == '__main__':
 
-    start()
+    startDrive()
+
+# def start():
+  
+#     cap = cv2.VideoCapture('kmu_track.mkv')
+#     time.sleep(3)
+
+#     while not rospy.is_shutdown():
+#         ret, image = cap.read()
+#         lpos, rpos = processImage(image)
+#         center = (lpos + rpos) / 2
+#         # c = center - lpos
+#         # c2 = rpos - center
+#         # print('c: ', c, 'c2: ', c2)
+#         # steer_angle = getSteerAng(pos)
+        
+#         # draw_steer(frame, steer_angle)
+#         if cv2.waitKey(5) & 0xFF == ord('q'):
+#             break
+
+# if __name__ == '__main__':
+
+#     start()
 
 
 

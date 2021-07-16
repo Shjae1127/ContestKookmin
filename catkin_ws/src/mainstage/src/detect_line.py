@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 
 Offset = 320
-lpos, rpos = 125, 560
+# lpos, rpos = 125, 560
+lpos, rpos = 120, 450
 pathwidth = rpos - lpos
 
 def detectLine(frame):
