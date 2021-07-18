@@ -11,21 +11,25 @@
 import rospy, time
 from common_ros_cls import ultra_module, lidar_module
 
-class obstacle:
-    #Variable Initialization
-    obstacle_search_status = True
-    obstacle_num = 0
-    obstacle_location = 0  # (0 : None, 1 : Left, 2: Right)
-    lidar = lidar_module("obstacle_detect")
-    starting_time = 0
-    lane_num = 0  # (0 : 중앙, 1 : 왼쪽 차선, 2 : 오른쪽 차선)
-    def obstacleDetect(self):
 
+class obstacleDriving:
+    def __init__(self):
+        # Variable Initialization
+        self.obstacle_search_status = True
+        self.obstacle_num = 0
+        self.obstacle_location = 0  # (0 : None, 1 : Left, 2: Right)
+        self.lidar = lidar_module("obstacle_detect")
+        self.starting_time = 0
+        self.lane_num = 0  # (0 : 중앙, 1 : 왼쪽 차선, 2 : 오른쪽 차선)
+        self.obstacle_starting_time = 0
+
+    def obstacleDetect(self):
         stack_L, stack_C, stack_R = 0, 0, 0
         reset_flag = 0
         obstacle_threshold = 10
-
         lidar_range, lidar_angleInc = self.lidar.getLidarData()
+        if self.obstacle_search_status == True:
+            self.obstacle_starting_time = time.time()
         if self.obstacle_search_status & (self.obstacle_num == 0):
             for i in range(70, 110):
                 if lidar_range[i] < 0.6:
@@ -59,18 +63,20 @@ class obstacle:
                 reset_flag, stack_C = 0, 0
         print(obstacle_num)
 
-
     def obstacleSteering(self):
+        # 장애물 피하는 시작 타임은 바깥에서 받아와야함
         time_gap = 1
         if self.obstacle_location == 1:  # 1차선 장애물
             if time.time() - self.obstacle_starting_time < time_gap:
                 angle, speed = -50, 5
-            elif time.time() - self.obstacle_starting_time < time_gap * 2:  # time_gap만큼 반대로 진행
+            elif (
+                time.time() - self.obstacle_starting_time < time_gap * 2
+            ):  # time_gap만큼 반대로 진행
                 angle, speed = 50, 5
             else:
-                obstacle_location = 0  # steering process end
+                self.obstacle_location = 0  # steering process end
                 # lane_num = 2 추후 2차 장애물 피할 때 추가
-                obstacle_search_status = True
+                self.obstacle_search_status = True
                 angle, speed = 0, 5  # angle,speed
 
         elif self.obstacle_location == 2:  # 2차선 장애물
@@ -83,6 +89,5 @@ class obstacle:
                 # lane_num = 1 추후 2차 장애물 피할 때 추가
                 self.obstacle_search_status = True  # 조향 완전히 종료되면 라이다 다시 작동
                 angle, speed = 0, 5
-        return angle, speed, obstacle_search_status  # 함수 변수 3개 리턴
-    def getObstacleSearchStatus(self):
-        return self.obstacle_search_status
+        return angle, speed  # 함수 변수 2개 리턴
+        # obstacle_search_status는 인스턴스 변수로 선언했기 때문에 리턴 할 필요없이 빼다 쓰면 됨
