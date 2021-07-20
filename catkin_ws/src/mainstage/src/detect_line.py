@@ -1,13 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+
+####################################################################
+# 프로그램명 : main_drive.py
+# 작 성 자 : 신홍재, 황예원
+# 생 성 일 : 2021년 07월 10일
+# 수 정 일 : 2021년 07월 13일
+####################################################################
+
 import cv2
 import numpy as np
-from driving_method import Width, Height, Offset
+import os
+import pickle
 
 lpos, rpos, cpos = 125, 450, 266
 pathwidth = rpos - lpos
 Gap = 40
+Width = 640
+Height = 480
+Offset = 320
 
 # 중앙 차선 좌표도 그릴 수 있도록 수정
 # draw rectangle
@@ -61,8 +73,13 @@ def detectLine(frame):
     frame = cv2.Canny(frame, 400, 200, None, 3)     # detect the edges of image by using Canny detector
     w = 100
     x_L = lpos-w/2
+    x_R = rpos-w/2
     if x_L < 0:
         x_L = 0
+    if x_R > 640:
+        x_R = 640
+    if x_R < x_L:
+        x_R = x_L +300
     x_R = rpos-w/2
 
     ### Set ROI tracing lpos, and rpos  ###
@@ -141,15 +158,34 @@ def detectLine(frame):
 
     return src, lpos, rpos, cpos
 
+# calibration function
+def undistortImage(frame, cal_dir = '/home/nvidia/xycar_ws/src/mainstage_test/src/data4_python2.pickle'):
+
+    with open(cal_dir, mode = 'rb') as f:
+        file = pickle.load(f)
+
+    mtx = file['mtx']
+    dist = file['dist']
+
+    undistored_img = cv2.undistort(frame, mtx, dist, None, mtx)
+
+    return undistored_img
+
+
 def processImage(frame):
     global lpos, rpos, cpos
-    frame, lpos, rpos, cpos = detectLine(frame) # 센터 좌표 추가
+
+    # frame = distorted frame, undistorted_frame = calibrated frame
+    undistorted_frame = undistortImage(frame) 
+    
+    undistorted_frame, lpos, rpos, cpos = detectLine(undistorted_frame) # 센터 좌표 추가
     if lpos < 0:
         lpos = 0
     if rpos >640:
         rpos = 640
-    frame = drawRectangle(frame, offset=Offset) # 센터 좌표 추가
+    undistorted_frame = drawRectangle(undistorted_frame, offset=Offset) # 센터 좌표 추가
 
-    cv2.imshow('image', frame)
+    #cv2.imshow('image', frame)
+    cv2.imshow('cal', undistorted_frame)
 
     return (lpos, rpos)

@@ -3,7 +3,7 @@
 
 ####################################################################
 # 프로그램명 : main_drive.py
-# 작 성 자 : 신홍재, 황예원
+# 작 성 자 : 신홍재, 황예원, 노현빈
 # 생 성 일 : 2021년 07월 10일
 # 수 정 일 : 2021년 07월 13일
 ####################################################################
@@ -16,8 +16,8 @@ from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
 from detect_line import processImage
-from driving_method import getSteerAng
-from obstacle_detect import obstacle
+from driving_method import getSteerAng, getSteerAng_test
+import obstacle_detect
 
 import sys
 import os
@@ -25,8 +25,6 @@ import signal
 
 # Variable Initailization
 
-Width = 640
-Height = 480
 
 def signal_handler(sig, frame):
     os.system('killall -9 python rosout')
@@ -56,7 +54,7 @@ def startDrive():
     global pub
     global image
     global cap
-    global Width, Height
+
 
     rospy.init_node('main_control')
     pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
@@ -65,23 +63,36 @@ def startDrive():
     rospy.sleep(2)
     driving_status = 0          #(0 :  StandardDriving, 1 : Obstacle, 2 : Parking, 3 : Crosswalk)
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-    out = cv2.VideoWriter('/home/nvidia/test/test.avi', fourcc, 30.0, (640, 480))
-
-
+    out = cv2.VideoWriter('/home/nvidia/test/crosswalk20.avi', fourcc, 30.0, (640, 480))
+    obstacle = obstacle_detect.obstacle()
+    test_time = time.time()
     while True:
         while not image.size == (640*480*3):
             continue
-
         lpos, rpos = processImage(image)
-        obstacle.obstacleDetect()
+        obstacle.obstacleDetect_test()
         out.write(image)
+        print(obstacle.obstacle_search_status)
 
-        if driving_status == 0:
-            angle = getSteerAng((lpos,rpos))
-            speed = 20 
-        elif driving_status == 1:
-            angle, speed = obstacle.obstacleSteering()
-        setAnglenSpeed(angle, speed)
+        # if obstacle.obstacle_search_status:
+        #     angle = getSteerAng((lpos,rpos))
+        #     speed = 5
+        # elif obstacle.obstacle_search_status is False:
+        #     angle, speed = obstacle.obstacleSteering()
+        #     speed = 3
+        if obstacle.getObstacleLocation() == 0:
+            angle = getSteerAng_test((lpos, rpos), 0)
+        elif obstacle.getObstacleLocation() == 1:
+            angle = getSteerAng_test((lpos, rpos), 2)
+        elif obstacle.getObstacleLocation() == 2:
+            angle = getSteerAng_test((lpos, rpos), 1)    
+        # angle = getSteerAng_test((lpos,rpos), 0)
+        # if time.time() - test_time > 3:
+        #     angle = getSteerAng_test((lpos, rpos), 2)
+        # elif time.time() - test_time > 6:
+        #     angle = getSteerAng_test((lpos,rpos), 2)
+        # angle = getSteerAng_test((lpos, rpos), 2)
+        setAnglenSpeed(angle,  5)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     out.release()
