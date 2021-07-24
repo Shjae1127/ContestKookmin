@@ -3,24 +3,27 @@
 
 ####################################################################
 # 프로그램명 : main_drive.py
-# 작 성 자 : 신홍재
+# 작 성 자 : 신홍재, 황예원, 노현빈
 # 생 성 일 : 2021년 07월 10일
-# 수 정 일 : 
 ####################################################################
 
+import time
 import rospy, rospkg
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
-from detect_line import Offset, detectLine
-from driving_method import Width, Height, getSteerAng
-from parking import parking as p
+from detect_line import processImage, setPosition
+from driving_method import getSteerAng, getSteerAngOneLine, getSteerAng_test
+import obstacle_detect
+import rear_parking
 
 import sys
 import os
 import signal
+
+# Variable Initailization
 
 
 def signal_handler(sig, frame):
@@ -44,109 +47,77 @@ def setAnglenSpeed(Angle, Speed):
     msg = xycar_motor()
     msg.angle = Angle
     msg.speed = Speed
-
     pub.publish(msg)
 
-# draw rectangle
-def drawRectangle(img, lpos, rpos, offset=0):
-    center = (lpos + rpos) / 2
+def isParking():
+    parking_status = False
+    lap_num = 0
+    # lap_num = getLapNum()
+    #FIXME getLapNum : return lap num
 
-    cv2.rectangle(img, (lpos - 5, 15 + offset),
-                  (lpos + 5, 25 + offset),
-                  (0, 255, 0), 2)
-    cv2.rectangle(img, (rpos - 5, 15 + offset),
-                  (rpos + 5, 25 + offset),
-                  (0, 255, 0), 2)
-    cv2.rectangle(img, (center - 5, 15 + offset),
-                  (center + 5, 25 + offset),
-                  (0, 255, 0), 2)
-    cv2.rectangle(img,(320-5,offset+15),(320+5,offset+25),(0,0,255),2)
-    return img
+    # parking_status = getParkingStatus()
+    #FIXME getParkingStatus : if find parking lot >> return True
+    #   initialize after some time (using function time.time())
+    if lap_num == 3 and parking_status:
+        return True
+    else:
+        return False
 
-# # left lines, right lines
-# def divide_left_right(lines):
-#     global Width
-
-#     low_slope_threshold = 0
-#     high_slope_threshold = 10
-
-#     # calculate slope & filtering with threshold
-#     slopes = []
-#     new_lines = []
-
-#     for line in lines:
-#         x1, y1, x2, y2 = line[0]
-
-#         if x2 - x1 == 0:
-#             slope = 0
-#         else:
-#             slope = float(y2-y1) / float(x2-x1)
-        
-#         if abs(slope) > low_slope_threshold and abs(slope) < high_slope_threshold:
-#             slopes.append(slope)
-#             new_lines.append(line[0])
-
-#     # divide lines left to right
-#     left_lines = []
-#     right_lines = []
-
-#     for j in range(len(slopes)):
-#         Line = new_lines[j]
-#         slope = slopes[j]
-
-#         x1, y1, x2, y2 = Line
-
-#         if (slope < 0) and (x2 < Width/2 - 90):
-#             left_lines.append([Line.tolist()])
-#         elif (slope > 0) and (x1 > Width/2 + 90):
-#             right_lines.append([Line.tolist()])
-
-#     return left_lines, right_lines
-
-
-# show image and return lpos, rpos
-def processImage(frame):
-    global Offset
-    frame, lpos, rpos = detectLine(frame)
-    if lpos < 0:
-        lpos = 0
-    if rpos >640:
-        rpos = 640
-    frame = drawRectangle(frame, lpos, rpos, offset=Offset)
-    cv2.imshow('image', frame)
-    return (lpos, rpos)
-
+def setDrivingMode(is_obstacle):
+    if not is_obstacle and not isParking():
+        return 0
+    elif is_obstacle and not isParking():
+        return 1
+    elif isParking() is True:
+        return 2
+    
 
 def startDrive():
     global pub
     global image
     global cap
-    global Width, Height
+
 
     rospy.init_node('main_control')
     pub = rospy.Publisher('xycar_motor', xycar_motor, queue_size=1)
 
     image_sub = rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
     rospy.sleep(2)
-
+    driving_mode = 0          #(0 :  StandardDriving, 1 : Obstacle, 2 : Parking, 3 : Crosswalk)
+    fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+    out = cv2.VideoWriter('/home/nvidia/test/crosswalk20.avi', fourcc, 30.0, (640, 480))
+    obstacle = obstacle_detect.obstacle()
+    parking = rear_parking.parking()
+    test_time = time.time()
     while True:
         while not image.size == (640*480*3):
             continue
-
-        lpos, rpos = processImage(image)
+        lpos, rpos, cpos = processImage(image)
+        obstacle.obstacleDetect_test()
+        out.write(image)
+        is_obstacle = obstacle.isObstacle()
+        driving_mode = setDrivingMode(is_obstacle)
+        speed = 10
+        # if driving_mode == 0:
+        #     angle = getSteerAng((lpos, rpos), 0)
+        # elif driving_mode == 1:
+        #     lpos, rpos, angle = getSteerAngOneLine((lpos, rpos, cpos), obstacle.getLaneNum(), obstacle.getObstacleLocation())
+        #     setPosition(lpos, rpos)
+        # elif driving_mode == 2:
+        #     angle, speed = parking.checkParkingLot()
         
-        center = (lpos + rpos) / 2
-        angle = (Width/2 - center)
-        ultra_array = p()
-        setAnglenSpeed(angle, 0)
-
+        # angle = getSteerAng_test((lpos,rpos), 1)
+        angle = getSteerAng((lpos,rpos), 1)
+        setAnglenSpeed(angle, speed)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
+    out.release()
     rospy.spin()
+    
 
 if __name__ == '__main__':
 
     startDrive()
+
 
 
