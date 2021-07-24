@@ -12,24 +12,30 @@
 import math
 
 
+# function for calculating steer angle when following center line using pure pursuit
+def getSteerAng_center(pos):
 
-# def getSteerAng(pos):
+    l = 350                     #350mm
+    r = 1250                    #1250mm
+    ratio = (float)(845/380)
+    lpos = pos[0]
+    rpos = pos[1]
+    print(lpos, rpos)
+    theta1_rad = (float)(320-lpos)/(float)(r) * ratio
+    theta2_rad = (float)(rpos-320)/(float)(r) * ratio
+    ld = (float)(r * math.cos((theta1_rad + theta2_rad)/2))
+    alpha_rad = (theta2_rad-theta1_rad)/2
+    degree = math.degrees(math.atan((2*(float)(l)*math.sin(alpha_rad))/(float)(ld)))
+    degree = -2.5 * degree
 
-#     l = 350                     #350mm
-#     r = 1250                    #1250mm
-#     ratio = (float)(845/380)
-#     lpos = pos[0]
-#     rpos = pos[1]
-#     print(lpos, rpos)
-#     theta1_rad = (float)(320-lpos)/(float)(r) * ratio
-#     theta2_rad = (float)(rpos-320)/(float)(r) * ratio
-#     ld = (float)(r * math.cos((theta1_rad + theta2_rad)/2))
-#     alpha_rad = (theta2_rad-theta1_rad)/2
-#     degree = math.degrees(math.atan((2*(float)(l)*math.sin(alpha_rad))/(float)(ld)))
-#     degree = -2.5 * degree
+    return degree
 
-#     return degree
-
+# function for calculating steer angle when following center, left, right line using pure pursuit
+# parameter : 
+#   pos : position from line detect [lpos, rpos]
+#   lane_num : line want to trace ,   0 : center line , 1 : left line, 2 : right line
+# return :
+#   angle : unit X, (-50 ~ 50). steer angle for rc car
 def getSteerAng(pos, lane_num):
 
     l = 350                     #350mm
@@ -53,11 +59,13 @@ def getSteerAng(pos, lane_num):
         alpha_rad = (theta2_rad-theta1_rad)/2 + math.acos(ld_0/(float)(ld))
         
     degree = math.degrees(math.atan((2*(float)(l)*math.sin(alpha_rad))/(float)(ld)))
-    degree = -2.5 * degree
+    angle = -2.5 * degree
     print(lpos, rpos)
 
-    return degree
+    return angle
 
+# function for calculating steer angle when following center, left, right line using pure pursuit
+# difference from existing function : camera's viewpoint is equal but translation is used to react more quickly to the curve
 def getSteerAng_test(pos, lane_num):
 
     l = 350                     #350mm
@@ -86,6 +94,12 @@ def getSteerAng_test(pos, lane_num):
 
     return degree
 
+# function for calculating steer angle when following center, left, right line with one line and center line using pure pursuit
+# parameter : 
+#   pos : [lpos, rpos, cpos]
+#   selected_line : one line you want to trace
+#   ignored_line : one line you want to ignore
+#   ex) (pos, 1, 1) : 왼쪽 차선을 무시하고 오른측 차선과 중앙 차선을 이용하여 왼쪽 차선을 따라 주행
 def getSteerAngOneLine(pos, selected_line, ignored_line):
 
     l = 350                     #350mm

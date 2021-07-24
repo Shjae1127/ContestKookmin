@@ -191,6 +191,7 @@ def processImage(frame):
 
     return (lpos, rpos, cpos)
 
+# function for setting lpos, rpos
 def setPosition(Lpos, Rpos):
     global lpos, rpos
     lpos = Lpos
