@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 ####################################################################
 # 프로그램명 : main_drive.py
 # 작 성 자 : 신홍재, 황예원
 # 생 성 일 : 2021년 07월 10일
 # 수 정 일 : 2021년 07월 13일
 ####################################################################
-
 import cv2
 import numpy as np
 import os
 import pickle
 
 lpos, rpos, cpos = 125, 450, 266
+cpos_prev = cpos
 pathwidth = rpos - lpos
 Gap = 40
 Width = 640
@@ -39,6 +38,7 @@ def drawRectangle(img, offset=0):
                   (center + 5, 25 + offset),
                   (0, 255, 0), 2)
     cv2.rectangle(img,(320-5,offset+15),(320+5,offset+25),(0,0,255),2)
+    print(lpos, center, rpos)
     return img
 
 # get the rectangle position of a center line
@@ -155,11 +155,12 @@ def detectLine(frame):
 
     # else:
     #     frame = draw_rectangle(frame, lpos, rpos, cpos, offset=Offset)
-
+    if cpos is None:
+        cpos = cpos_prev
     return src, lpos, rpos, cpos
 
 # calibration function
-def undistortImage(frame, cal_dir = '/home/nvidia/xycar_ws/src/mainstage_test/src/data4_python2.pickle'):
+def undistortImage(frame, cal_dir = '/home/nvidia/xycar_ws/src/mainstage/src/data4_python2.pickle'):
 
     with open(cal_dir, mode = 'rb') as f:
         file = pickle.load(f)
@@ -188,4 +189,9 @@ def processImage(frame):
     #cv2.imshow('image', frame)
     cv2.imshow('cal', undistorted_frame)
 
-    return (lpos, rpos)
+    return (lpos, rpos, cpos)
+
+def setPosition(Lpos, Rpos):
+    global lpos, rpos
+    lpos = Lpos
+    rpos = Rpos

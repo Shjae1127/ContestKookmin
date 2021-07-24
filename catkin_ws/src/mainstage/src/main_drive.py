@@ -5,7 +5,6 @@
 # 프로그램명 : main_drive.py
 # 작 성 자 : 신홍재, 황예원, 노현빈
 # 생 성 일 : 2021년 07월 10일
-# 수 정 일 : 2021년 07월 13일
 ####################################################################
 
 import time
@@ -15,9 +14,10 @@ import cv2
 from cv_bridge import CvBridge
 from xycar_msgs.msg import xycar_motor
 from sensor_msgs.msg import Image
-from detect_line import processImage
-from driving_method import getSteerAng, getSteerAng_test
+from detect_line import processImage, setPosition
+from driving_method import getSteerAng, getSteerAngOneLine, getSteerAng_test
 import obstacle_detect
+import rear_parking
 
 import sys
 import os
@@ -47,8 +47,30 @@ def setAnglenSpeed(Angle, Speed):
     msg = xycar_motor()
     msg.angle = Angle
     msg.speed = Speed
-
     pub.publish(msg)
+
+def isParking():
+    parking_status = False
+    lap_num = 0
+    # lap_num = getLapNum()
+    #FIXME getLapNum : return lap num
+
+    # parking_status = getParkingStatus()
+    #FIXME getParkingStatus : if find parking lot >> return True
+    #   initialize after some time (using function time.time())
+    if lap_num == 3 and parking_status:
+        return True
+    else:
+        return False
+
+def setDrivingMode(is_obstacle):
+    if not is_obstacle and not isParking():
+        return 0
+    elif is_obstacle and not isParking():
+        return 1
+    elif isParking() is True:
+        return 2
+    
 
 def startDrive():
     global pub
@@ -61,38 +83,32 @@ def startDrive():
 
     image_sub = rospy.Subscriber("/usb_cam/image_raw", Image, img_callback)
     rospy.sleep(2)
-    driving_status = 0          #(0 :  StandardDriving, 1 : Obstacle, 2 : Parking, 3 : Crosswalk)
+    driving_mode = 0          #(0 :  StandardDriving, 1 : Obstacle, 2 : Parking, 3 : Crosswalk)
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
     out = cv2.VideoWriter('/home/nvidia/test/crosswalk20.avi', fourcc, 30.0, (640, 480))
     obstacle = obstacle_detect.obstacle()
+    parking = rear_parking.parking()
     test_time = time.time()
     while True:
         while not image.size == (640*480*3):
             continue
-        lpos, rpos = processImage(image)
+        lpos, rpos, cpos = processImage(image)
         obstacle.obstacleDetect_test()
         out.write(image)
-        print(obstacle.obstacle_search_status)
-
-        # if obstacle.obstacle_search_status:
-        #     angle = getSteerAng((lpos,rpos))
-        #     speed = 5
-        # elif obstacle.obstacle_search_status is False:
-        #     angle, speed = obstacle.obstacleSteering()
-        #     speed = 3
-        if obstacle.getObstacleLocation() == 0:
-            angle = getSteerAng_test((lpos, rpos), 0)
-        elif obstacle.getObstacleLocation() == 1:
-            angle = getSteerAng_test((lpos, rpos), 2)
-        elif obstacle.getObstacleLocation() == 2:
-            angle = getSteerAng_test((lpos, rpos), 1)    
-        # angle = getSteerAng_test((lpos,rpos), 0)
-        # if time.time() - test_time > 3:
-        #     angle = getSteerAng_test((lpos, rpos), 2)
-        # elif time.time() - test_time > 6:
-        #     angle = getSteerAng_test((lpos,rpos), 2)
-        # angle = getSteerAng_test((lpos, rpos), 2)
-        setAnglenSpeed(angle,  5)
+        is_obstacle = obstacle.isObstacle()
+        driving_mode = setDrivingMode(is_obstacle)
+        speed = 10
+        # if driving_mode == 0:
+        #     angle = getSteerAng((lpos, rpos), 0)
+        # elif driving_mode == 1:
+        #     lpos, rpos, angle = getSteerAngOneLine((lpos, rpos, cpos), obstacle.getLaneNum(), obstacle.getObstacleLocation())
+        #     setPosition(lpos, rpos)
+        # elif driving_mode == 2:
+        #     angle, speed = parking.checkParkingLot()
+        
+        # angle = getSteerAng_test((lpos,rpos), 1)
+        angle = getSteerAng((lpos,rpos), 1)
+        setAnglenSpeed(angle, speed)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     out.release()
@@ -102,7 +118,6 @@ def startDrive():
 if __name__ == '__main__':
 
     startDrive()
-
 
 
 
