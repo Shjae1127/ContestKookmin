@@ -54,3 +54,5 @@ CATKIN_IGNORE
 
 *.json
 xycar_device
+
+.DS_Store
