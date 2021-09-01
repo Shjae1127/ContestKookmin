@@ -8,6 +8,8 @@
 ####################################################################
 
 import time
+
+from numpy.core.numeric import cross
 import rospy, rospkg
 import numpy as np
 import cv2
@@ -18,11 +20,10 @@ from detect_line import processImage, posCalibration
 from driving_method import (
     getSteerAng,
     getSteerAngOneLine,
-    getSteerAng_test,
-    getSteerAngOneLine_test,
 )
 import obstacle_detect
 import rear_parking
+import ped_stop
 
 import sys
 import os
@@ -47,6 +48,13 @@ def img_callback(data):
     global image
     image = bridge.imgmsg_to_cv2(data, "bgr8")
 
+class Flag:
+    def __init__(self):
+        self.parking = False
+        self.obstacle = False
+        self.standard = False
+        self.crosswalk = False
+        self.lap = 0
 
 # publish xycar_motor msg
 def setAnglenSpeed(Angle, Speed):
@@ -58,28 +66,30 @@ def setAnglenSpeed(Angle, Speed):
     pub.publish(msg)
 
 
-def isParking():
+def isParking(flag):
     parking_status = False
-    lap_num = 0
     # lap_num = getLapNum()
     # FIXME getLapNum : return lap num
 
     # parking_status = getParkingStatus()
     # FIXME getParkingStatus : if find parking lot >> return True
     #   initialize after some time (using function time.time())
-    if lap_num == 3 and parking_status:
+    if flag.lap == 3 and parking_status:
         return True
     else:
         return False
+    
 
-
-def setDrivingMode(is_obstacle):
-    if not is_obstacle and not isParking():
-        return 0
-    elif is_obstacle and not isParking():
+def setDrivingMode(flag):
+    
+    if flag.obstacle and not isParking(flag):
         return 1
-    elif isParking() is True:
+    elif isParking(flag) is True:
         return 2
+    elif flag.crosswalk is True:
+        return 3
+    else:
+        return 0
 
 
 def startDrive():
@@ -99,49 +109,94 @@ def startDrive():
     )
     parking = rear_parking.parking()
     obstacle = obstacle_detect.obstacle()
-    test_time = time.time()
+    # crosswalk = ped_stop.Crosswalk()
+    flag = Flag()
+    crosswalk_time = 0
     while True:
         while not image.size == (640 * 480 * 3):
             continue
-        
 
-        # lpos, rpos, cpos = processImage(image, lane_num_test)
         lpos, rpos, cpos = processImage(image)
         if parking.getUltradata():
             obstacle.setUltrasonic(parking.getUltradata())
-        obstacle.obstacleDetect_test()
+        obstacle.obstacleDetect()
         out.write(image)
-        is_obstacle = obstacle.isObstacle()
-        driving_mode = setDrivingMode(is_obstacle)
-        speed = 5
+        flag.obstacle = obstacle.isObstacle()
+        # if obstacle.getFinishFlag() is True:
+        #     print("-----Searching Crosswalk-------")
+        #     if crosswalk:
+        #         crosswalk = ped_stop.Crosswalk()
+        #     if crosswalk.isCrossWalk(image) is True and crosswalk_time == 0:
+        #         crosswalk_time = time.time()
+        #         flag.lap += 1
+
+        #     if time.time() - crosswalk_time < 6:
+        #         flag.crosswalk = True
+        #     elif time.time() - crosswalk_time == 6:
+        #         flag.crosswalk = False
+        #         obstacle.resetFinishFlag()
+        driving_mode = setDrivingMode(flag)
+        # driving_mode = 2
+        print("driving mode : " + str(driving_mode))
+        
         if driving_mode == 0:
             angle = getSteerAng((lpos, rpos), 0)
+            angle = angle * 2
+            speed = 6
+            set_time = time.time()
         elif driving_mode == 1:
-            lane_num_test = obstacle.getLaneNum()
-            if obstacle.getObstacleNum() == 1:
-                lane_num_test += 0.5            
-            lpos, cpos, rpos = posCalibration(lane_num_test)
+            test_lane_num = obstacle.getLaneNum()
+            if obstacle.getObstacleNum() == 1 :
+                test_lane_num +=0.5 
+            lpos, cpos, rpos = posCalibration(test_lane_num,obstacle.getObstacleNum())
             angle, lpos, rpos = getSteerAngOneLine(
                 (lpos, rpos, cpos),
                 obstacle.getLaneNum(),
                 obstacle.getObstacleLocation(),
             )
-            # setPosition(lpos, rpos)
-            angle = angle * 2.2
+            
             speed = 6
-            # angle = angle * 1.5
+            angle = angle * 2.2
+            # angle = angle * 5
 
         elif driving_mode == 2:
-            angle, speed = parking.checkParkingLot()
-            angle, speed = 0
-        # setAnglenSpeed(angle, speed)
-        # stop_flag = obstacle.getStopDriving()
-        # if stop_flag is True:
-        #     speed = 0
-        speed = 5
+
+            park_mode = parking.checkParkingLot() 
+
+            if park_mode == 10 or 20:
+                angle = getSteerAng((lpos, rpos), 0)
+                angle = angle * 2.1
+
+                if park_mode == 10:
+                    speed = 5
+                else:
+                    speed = 3
+
+                print("mode : {}, speed : {}, angle : {}".format(park_mode, speed, angle))
+
+            if park_mode == 30:
+
+                angle, speed, parking_time = parking.launchParkingMode()
+                print("time : ", parking_time)
+
+                if parking_time < 2.6:
+                    angle = getSteerAng((lpos, rpos), 0)
+                    angle = angle * 2.1
+
+                    speed = 3
+                    
+                else:
+                    print("moooode : {}, speed : {}, angle : {}".format(park_mode, speed, angle))
+
+        elif driving_mode == 3:
+
+            speed = 0
+
         setAnglenSpeed(angle,speed)
+
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
+
     out.release()
     rospy.spin()
 

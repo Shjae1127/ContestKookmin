@@ -5,6 +5,7 @@
 # 프로그램명 : obstacle_detect.py
 # 수 정 자 : 신홍재, 노현빈
 # 생 성 일 : 2021년 07월 16일
+# 수 정 일 : 2021년 08월 17일
 ####################################################################
 
 import rospy, time
@@ -38,7 +39,7 @@ class obstacle:
         self.ultra_data = []
         self.ultra_search_status = 0
         self.ultra_reset = False  # True일 때 초기화
-        self.stop_drive = False
+        self.finish_flag = False
         
 
     def setUltrasonic(self, sonic_list):
@@ -46,23 +47,22 @@ class obstacle:
             self.ultra_data = sonic_list
             self.left = self.ultra_data[0]
             self.right = self.ultra_data[4]
+            # print('sonaleft:{}'.format(self.left),'sonaright:{}'.format(self.right))
 
-    def obstacleDetect_test(self):
+    def obstacleDetect(self):
         stack_L, stack_C, stack_R = 0, 0, 0
         reset_flag = 0
         obstacle_threshold = 10
-        ###################################
-        stop_flag = 0
-        ###################################
+        obstacle_alpha = 1
         lidar_range, lidar_angleInc = self.lidar.getLidarData()
          
-        for i in range(85,95) :
-            if lidar_range[i]<0.2:
-                stop_flag +=1
-        if stop_flag >4:
-            self.stop_drive = True
-            print("-----------------enmergency!-----------------")
-        stop_flag = 0
+        # for i in range(85,95) :
+        #     if lidar_range[i]<0.2:
+        #         stop_flag +=1
+        # if stop_flag >4:
+        #     self.stop_drive = True
+        #     print("-----------------enmergency!-----------------")
+        # stop_flag = 0
 
         # -----초음파-------------
         if self.ultra_sensor == "left":
@@ -90,27 +90,30 @@ class obstacle:
 
         # -----장애물 인지 -----------
         if self.obstacle_num == 0:
-            if self.obstacle_search_status is False:
-                lidar_check = [0]*71
             if self.ultra_reset:  # 초음파 리셋트리거 작동 전까지 계속 작동
                 self.obstacle_search_status = True
-            lidar_check = [1 if lidar_range[i]<1 else 0 for i in range(55,126)]
-            print('L:{}'.format(lidar_check[0:36].count(1)),'R:{}'.format(lidar_check[36:71].count(1)))
-
-            if lidar_check[0:36].count(1) >obstacle_threshold :#왼쪽영역 체크
-                self.obstacle_location =1
+            if self.obstacle_search_status is False :
+                lidar_check = [0]*71
+            else :
+                lidar_check = [1 if lidar_range[i]<0.8 else 0 for i in range(55,126)]            
+            print('L:{}'.format(lidar_check[0:35].count(1)),'R:{}'.format(lidar_check[35:70].count(1)))
+                # lidar_check = [0]*41
+            # else :
+            #     lidar_check = [1 if lidar_range[i]<1.3 else 0 for i in range(70,111)]    
+            #     self.obstacle_location = 0           
+            #     print('F:{}'.format(lidar_check[0:40].count(1)))
+            if lidar_check[0:70].count(1) >obstacle_threshold*2 : #장애물 말고 다른 물체 인식, 초기화시킴
+                lidar_check = [0]*71
+            elif lidar_check[0:35].count(1) >obstacle_threshold :#왼쪽영역 체크
+                self.obstacle_location = 1
                 print('detect left')
-            elif lidar_check[36:71].count(1) >obstacle_threshold :
-                self.obstacle_location=2
+            elif lidar_check[35:70].count(1) >obstacle_threshold :
+                self.obstacle_location = 2
                 print('detect right')
 
             self.obstacle_que.push(self.obstacle_location)# 갱신안하고 큐에 넣음
 
         elif self.obstacle_num != 0:
-            if self.obstacle_search_status is False:
-                lidar_check = [0]*41
-            else :
-                lidar_check = [1 if lidar_range[i]<1 else 0 for i in range(70,111)]
             if self.ultra_reset:
                 self.obstacle_search_status = True
                 if self.obstacle_num == 3:  # 후면 초음파 센서에서 값 상실 할때까지 차선 이동
@@ -119,9 +122,16 @@ class obstacle:
                     self.obstacle_location = 0
                     self.obstacle_que.data = [0]*2
                     lidar_check = []
-            
-            if lidar_check[0:42].count(1) >obstacle_threshold :
+                    self.finish_flag = True
+            if self.obstacle_search_status is False:
+                lidar_check = [0]*41
+            else :
+                lidar_check = [1 if lidar_range[i]<0.8 else 0 for i in range(70,111)]
+
+            print('F:{}'.format(lidar_check[0:41].count(1)))
+            if lidar_check[0:41].count(1) >obstacle_threshold*0.9 :
                 self.obstacle_location = self.lane_num
+                print('obstalce detect!!!-----------------------')
             self.obstacle_que.push(self.obstacle_location)
 
         # 장애물 인식된 순간
@@ -135,13 +145,10 @@ class obstacle:
                 self.lane_num = 1
                 self.ultra_sensor = "right"  # 왼쪽 초음파 센서 사용할지 결정
             self.obstacle_search_status = False
-        print(self.obstacle_num, self.obstacle_search_status, self.ultra_sensor)
+        print(self.obstacle_num, self.obstacle_search_status, self.ultra_sensor,self.lane_num)
 
     def getObstacleLocation(self):
         return self.obstacle_location
-
-    def resetObstacleLocation(self):
-        self.obstacle_location = 0
     
     def getObstacleNum(self):
         return self.obstacle_num
@@ -154,5 +161,9 @@ class obstacle:
             return False
         else:
             return True
-    def getStopDriving(self) :
-        return self.stop_drive
+
+    def getFinishFlag(self) :
+        return self.finish_flag
+
+    def resetFinishFlag(self):
+        self.finish_flag = False

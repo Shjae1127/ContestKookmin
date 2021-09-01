@@ -16,9 +16,11 @@ class parking:
         self.rback_prev = 0
         self.right_prev = 0
         self.mode = 0
+        self.version = 0
         self.stage = 0
         self.init0, self.init1, self.init2 = False, False, False
         self.parking_start_time = 0
+        self.parking_time = time.time()
         self.t_point1, self.t_point2 = 0, 0
         self.is_parking_launch = False
         self.parking = ultra_module("rear_parking")
@@ -40,83 +42,90 @@ class parking:
         return self.parking.get_ultrasonic_data()
 
     def launchParkingMode(self):
+        global parking_time
+
         self.sortUltraData()
         if self.is_parking_launch is False:
             self.parking_start_time = time.time()
-            angle, speed = 0, 0
+            #angle, speed = 0, 0 #
             self.is_parking_launch = True
-            print("test")
-            return angle, speed
-        # method 1. control by time
+            #print("test")
+            #return angle, speed
+        # 1. control by time - into the parking lot
         parking_time = time.time() - self.parking_start_time
 
-        if parking_time < 1.3:
-            angle, speed = 0, 5
+        # if parking_time < 2.3: #par
+        #     angle, speed = 0, 3
 
-        elif parking_time < 2.5:  # 1sec
+        if parking_time < 3.5:  
             angle, speed = -40, 0
 
-        elif parking_time < 4.8:  # 1.6sec
-            # if back < 80:
-            #     return -20, 0
-            angle, speed = -40, -4
+        elif parking_time < 5.8: #par
+            angle, speed = -40, -3
 
-        elif parking_time < 5.8:  # 1sec
-            angle, speed = 50, 0
+        elif parking_time < 6.2:
+            angle, speed = 0, -3
 
-        elif parking_time < 8.1:  # 1.6sec
-            # if back < 80:
-            #     return -20, 0
-            angle, speed = 50, -4
+        # 2. rback sensor - linear
 
-        elif parking_time < 10.1:
-            angle, speed = 0, 0
+        elif parking_time < 8:  
+            if self.rback > 45: #par
+               angle, speed = 0, -3
+            else:
+                angle, speed = 40, 0 
 
-        return angle, speed
+        # 3. back sensor - left curve
+         
+        elif parking_time < 12: 
+            if self.back > 15: #par
+                angle, speed = 40, -3
+            else:
+                angle, speed = 0, 0    
 
-    # mehtod 2. control bt ultra val
-    # if stage == 0:
-    #     angle = -40
-    #     speed = -4
-    #         if 60 < rback < 80:
-    #             angle = 0
-    #             speed = -4
-    #             stage = 1
-    #     return angle, speed
+        # 4. right sensor - x coord , orientation callib
 
-    # if stage == 1:
+        elif parking_time < 17:
+            if self.right > 15: #par
+                if self.back < 40: #par
+                    angle, speed = -20, 3 #3
+                elif self.back > 40:
+                    angle, speed = 0, 0
 
-    # elif back > 15:
-    #     return 0, -3
+            else :
+                if self.lback - self.rback > 3 and self.back < 57: #par
+                    angle, speed = 10, 3 #3
+                elif self.right < 13 and self.back < 57: #par
+                    angle, speed = 10, 3
+                else :
+                    angle, speed = 0, 0
 
-    # return angle, speed
+        # 5. back sensor - y coord
 
-    # if parking_time < 1.0:
-    #     return 0, 5
+        elif parking_time <20:
+            if self.back < 46: # par
+                angle, speed = 0, 3 #3
+            else:
+                angle, speed = 0, 0 
 
-    # elif parking_time < 2.0: # 1sec
-    #     return -40, 0
+        elif parking_time < 23:
+            if self.back > 46: # par
+                angle, speed = 0, -3 #-3
+            else:
+                angle, speed = 0, 0
 
-    # elif parking_time < 3.0: # 1s.5ec
-    #     return -40, -4
+        else:
+            angle, speed = 0, 0             
 
-    # elif parking_time < 4.0: # 1sec
-    #     return 0, 0
+        print("rback : {} back : {}, lback : {}, right : {}". format(self.rback, self.back, self.lback, self.right))
+        print("time : ", parking_time)
 
-    # elif parking_time < 4.5: # 1sec
-    #     return 0, -4
-
-    # elif parking_time < 5.5: # 1sec
-    #     return 50, 0
-
-    # elif parking_time < 6.5: # 1sec
-    #     return 50, 0
+        return angle, speed, parking_time
 
     # return angle, speed
 
     # angle : R => 50 : 132 -40 : 132 -45 : 112
 
-    def checkParkingLot(self):
+    def checkParkingLot(self):        
         self.sortUltraData()
         if self.init0 is False:  # initialize
             self.right_prev = self.right
@@ -139,9 +148,12 @@ class parking:
                     self.init1 = True
                 # print('time checking start')
 
+            self.version = 10
+
             if abs(self.rback_prev - self.rback) >= 20:  # check for mode 1
                 self.mode = 1
                 # print("mode : ", mode)
+            
 
         if self.mode == 1:  # check for mode 2
             print(
@@ -152,33 +164,40 @@ class parking:
                 self.right,
             )
 
-            if self.right_prev - self.right >= 10:
+            self.version = 20
+
+            if self.right_prev - self.right >= 15:
                 if self.init2 == False:
                     self.t_point2 = time.time()
                     self.init2 = True
                 self.mode = 2
+
                 print("duration of time : ", self.t_point2 - self.t_point1)
+            
+            
 
         if self.mode == 2:  # start parking mode
-
-            angle, speed = self.launchParkingMode()
-            # print('mode 2 : parking pursuit , ', 'right_prev : ' , right_prev, ' r : ' ,right , 'parking time : ', time.time()- park_start_time)
+            self.version = 30
+            # angle, speed = self.launchParkingMode()
+            # print('mode 2 : parking pursuit , ', 'right_prev : ' , self.right_prev, ' r : ' ,self.right)
             # print("time duration : ", t_point2 - t_point1)
-            print(
-                "rback val : ",
-                self.rback,
-                "back val : ",
-                self.back,
-                "left val : ",
-                self.lback,
-            )
-            return angle, speed  # parking code
+            # print(
+            #     "rback val : ",
+            #     self.rback,
+            #     "back val : ",
+            #     self.back,
+            #     "left val : ",
+            #     self.left,
+            # )
 
         self.rback_prev = self.rback
         self.right_prev = self.right
 
-        if self.mode < 2:
-            return 0, 5  # (angle, speed) # pure pursuit code
+        return self.version
+
+        # if self.mode < 2:
+        #     return angle, speed
+        # return 0, 3  # (angle, speed) # pure pursuit code
 
 
 # def action_time_init(self):
