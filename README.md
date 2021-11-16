@@ -1,7 +1,7 @@
 # 제 4회 국민대학교 자율주행 경진대회
 ## 팀명 : 천리안
 > 팀장 : 신홍재(Shjae1127,MSBean)  
-> 팀원 : 김현진(rescrobot), 이성준(sj1king), 황예원(Yawoning)  
+> 팀원 : 김현진(rescrobot), 이성준(sj1king), 황예원(Yawoning), 노현빈(Shineho2014)
 <br>
 <!-- TABLE OF CONTENTS -->
 
